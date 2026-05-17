@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Folio — Writer's IDE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0a0a0a;
+      --paper: #f7f5f0;
+      --mid: #999;
+      --border: #d0cdc7;
+      --accent: #0a0a0a;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Courier Prime', monospace;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      position: relative;
+    }
+
+    /* Ruled paper background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        transparent,
+        transparent 27px,
+        var(--border) 27px,
+        var(--border) 28px
+      );
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: 'IM Fell English', serif;
+      font-size: 4rem;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 0.2rem;
+    }
+
+    .tagline {
+      font-family: 'Courier Prime', monospace;
+      font-style: italic;
+      font-size: 0.78rem;
+      color: var(--mid);
+      letter-spacing: 0.08em;
+      margin-bottom: 3rem;
+    }
+
+    .login-box {
+      border: 1px solid var(--ink);
+      padding: 2.5rem 2rem;
+      background: var(--paper);
+      position: relative;
+    }
+
+    /* Corner marks */
+    .login-box::before,
+    .login-box::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+    }
+    .login-box::before {
+      top: -4px; left: -4px;
+      border-top: 2px solid var(--ink);
+      border-left: 2px solid var(--ink);
+    }
+    .login-box::after {
+      bottom: -4px; right: -4px;
+      border-bottom: 2px solid var(--ink);
+      border-right: 2px solid var(--ink);
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    .field-group {
+      margin-bottom: 1.4rem;
+      text-align: left;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--ink);
+      padding: 0.5rem 0;
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.95rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-bottom-color: var(--ink);
+      border-bottom-width: 2px;
+    }
+
+    input::placeholder { color: var(--border); }
+
+    .btn-enter {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s;
+    }
+
+    .btn-enter:hover { opacity: 0.75; }
+    .btn-enter:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error-msg {
+      font-size: 0.75rem;
+      color: #c0392b;
+      margin-top: 1rem;
+      min-height: 1rem;
+      font-style: italic;
+    }
+
+    .footer-note {
+      margin-top: 2.5rem;
+      font-size: 0.7rem;
+      color: var(--mid);
+      letter-spacing: 0.05em;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--paper);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="logo">Folio</div>
+    <p class="tagline">A writer's workspace</p>
+
+    <div class="login-box">
+      <div class="field-group">
+        <label class="field-label" for="email">Email</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn-enter" id="loginBtn" onclick="handleLogin()">Enter</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <p class="footer-note">Your manuscript awaits.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://yspinihkruvjmawqjqwb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzcGluaWhrcnV2am1hd3FqcXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5Mzk2MjAsImV4cCI6MjA5NDUxNTYyMH0.yUx4PeOnO0xA_GOvx5l20mNXv1K5ynXfUX1KznHCY3s';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Redirect if already logged in
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) window.location.href = 'ide.html';
+    })();
+
+    // Enter key support
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('errorMsg');
+
+      if (!email || !password) {
+        err.textContent = 'Please fill in all fields.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Entering…';
+      err.textContent = '';
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        err.textContent = error.message;
+        btn.disabled = false;
+        btn.textContent = 'Enter';
+      } else {
+        window.location.href = 'ide.html';
+      }
+    }
+  </script>
+</body>
+</html>

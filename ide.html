@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Folio — IDE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0a0a0a;
+      --paper: #f7f5f0;
+      --paper-dark: #eeebe4;
+      --mid: #888;
+      --border: #ccc9c0;
+      --accent: #0a0a0a;
+      --line-h: 28px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Courier Prime', monospace;
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 44px;
+      background: var(--ink);
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.4rem;
+      letter-spacing: -1px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+
+    .topbar-user {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: #aaa;
+      font-style: italic;
+    }
+
+    .btn-ghost {
+      background: none;
+      border: 1px solid #444;
+      color: var(--paper);
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-ghost:hover { background: var(--paper); color: var(--ink); }
+
+    #save-btn {
+      background: none;
+      border: 1px solid #555;
+      color: #aaa;
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    #save-btn:hover:not(:disabled) { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+    #save-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #save-btn.dirty { border-color: #aaa; color: #ccc; }
+    #save-btn.saved { border-color: #6a9a6a; color: #6a9a6a; }
+
+    /* ── LAYOUT ── */
+    #layout {
+      display: flex;
+      height: 100vh;
+      padding-top: 44px;
+    }
+
+    /* ── LEFT PANEL ── */
+    #left-panel {
+      width: 33.333%;
+      min-width: 260px;
+      max-width: 400px;
+      border-right: 1px solid var(--ink);
+      display: flex;
+      flex-direction: column;
+      background: var(--paper);
+      position: relative;
+    }
+
+    #left-panel-header {
+      padding: 1.2rem 1.2rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 0.3rem;
+    }
+
+    .book-title-input {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.1rem;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid transparent;
+      color: var(--ink);
+      width: 100%;
+      outline: none;
+      padding: 0.1rem 0;
+      transition: border-color 0.2s;
+    }
+    .book-title-input:hover,
+    .book-title-input:focus {
+      border-bottom-color: var(--border);
+    }
+
+    #chapters-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.8rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    #chapters-list::-webkit-scrollbar { width: 4px; }
+    #chapters-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* ── CHAPTER CARD ── */
+    .chapter-card {
+      margin: 0 0.8rem 0.7rem;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      background: var(--paper);
+    }
+
+    .chapter-card:hover { border-color: var(--ink); }
+
+    .chapter-card.active {
+      border-color: var(--ink);
+      background: var(--paper-dark);
+    }
+
+    .chapter-card-inner {
+      padding: 0.9rem 1rem 0.9rem;
+    }
+
+    .chapter-number {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 0.3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chapter-delete-btn {
+      background: none;
+      border: none;
+      color: var(--border);
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 0 2px;
+      transition: color 0.15s;
+      opacity: 0;
+    }
+    .chapter-card:hover .chapter-delete-btn { opacity: 1; }
+    .chapter-delete-btn:hover { color: #c0392b; }
+
+    .chapter-title-field {
+      font-family: 'Courier Prime', monospace;
+      font-weight: 700;
+      font-size: 0.88rem;
+      background: transparent;
+      border: none;
+      color: var(--ink);
+      width: 100%;
+      outline: none;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 0.5rem;
+    }
+    .chapter-title-field:focus { cursor: text; }
+
+    .chapter-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem 0.8rem;
+    }
+
+    .meta-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    .meta-input {
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.75rem;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid transparent;
+      color: var(--ink);
+      outline: none;
+      padding: 1px 0;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .meta-input:focus,
+    .meta-input:hover {
+      border-bottom-color: var(--border);
+    }
+
+    .chapter-synopsis-field {
+      font-family: 'Courier Prime', monospace;
+      font-style: italic;
+      font-size: 0.75rem;
+      color: var(--mid);
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      resize: none;
+      padding: 0;
+      margin-top: 0.5rem;
+      line-height: 1.5;
+      min-height: 36px;
+    }
+
+    /* ── ADD CHAPTER BUTTON ── */
+    #left-panel-footer {
+      padding: 0.8rem;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #add-chapter-btn {
+      width: 100%;
+      padding: 0.65rem;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--mid);
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #add-chapter-btn:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    /* ── RIGHT PANEL ── */
+    #right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    #right-panel-header {
+      padding: 1rem 1.8rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    #chapter-heading {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.4rem;
+      letter-spacing: -0.5px;
+      flex: 1;
+    }
+
+    .word-count {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      color: var(--mid);
+      font-style: italic;
+      white-space: nowrap;
+    }
+
+    #editor-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.8rem 4rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      background-image: repeating-linear-gradient(
+        transparent,
+        transparent 27px,
+        rgba(200,197,190,0.3) 27px,
+        rgba(200,197,190,0.3) 28px
+      );
+    }
+    #editor-area::-webkit-scrollbar { width: 4px; }
+    #editor-area::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* ── PARAGRAPH NODES ── */
+    .para-node {
+      position: relative;
+      margin-bottom: 0;
+    }
+
+    .para-row {
+      display: flex;
+      align-items: flex-start;
+      position: relative;
+      padding: 6px 0;
+    }
+
+    .para-toggle {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--border);
+      font-size: 0.6rem;
+      transition: color 0.15s;
+      margin-top: 3px;
+      user-select: none;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .para-toggle:hover { color: var(--ink); }
+    .para-toggle.has-children { color: var(--mid); }
+
+    .para-toggle-icon {
+      transition: transform 0.18s ease;
+      display: inline-block;
+    }
+    .para-toggle.collapsed .para-toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .para-content-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .para-text {
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.92rem;
+      line-height: 1.75;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      resize: none;
+      padding: 0;
+      overflow: hidden;
+      min-height: 1.75em;
+      caret-color: var(--ink);
+      transition: background 0.15s;
+    }
+    .para-text:hover { background: rgba(0,0,0,0.02); }
+    .para-text:focus { background: rgba(0,0,0,0.03); }
+
+    /* Depth-based indentation */
+    .para-node[data-depth="0"] > .para-row { padding-left: 0; }
+    .para-node[data-depth="1"] > .para-row { padding-left: 1.8rem; }
+    .para-node[data-depth="2"] > .para-row { padding-left: 3.6rem; }
+    .para-node[data-depth="3"] > .para-row { padding-left: 5.4rem; }
+    .para-node[data-depth="4"] > .para-row { padding-left: 7.2rem; }
+
+    /* Spacing between depth-0 blocks */
+    .para-node[data-depth="0"] {
+      margin-bottom: 1.2rem;
+    }
+    .para-node[data-depth="1"] {
+      margin-bottom: 0.1rem;
+    }
+
+    /* Collapse animation */
+    .para-children {
+      overflow: hidden;
+      transition: max-height 0.22s ease, opacity 0.18s ease;
+      max-height: 9999px;
+      opacity: 1;
+    }
+    .para-children.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    /* Depth indicator lines */
+    .para-node[data-depth="1"] > .para-row::before,
+    .para-node[data-depth="2"] > .para-row::before,
+    .para-node[data-depth="3"] > .para-row::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+    .para-node[data-depth="1"] > .para-row::before { left: 0.8rem; }
+    .para-node[data-depth="2"] > .para-row::before { left: 2.6rem; }
+    .para-node[data-depth="3"] > .para-row::before { left: 4.4rem; }
+
+    /* ── ADD PARAGRAPH ── */
+    .add-para-btn {
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      background: none;
+      border: none;
+      color: var(--border);
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 4px 0 4px 20px;
+      transition: color 0.15s;
+      letter-spacing: 0.05em;
+    }
+    .para-node:hover > .add-para-btn,
+    .add-para-btn:hover {
+      display: flex;
+      color: var(--mid);
+    }
+    .add-para-btn:hover { color: var(--ink); }
+
+    #global-add-para {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: none;
+      border-top: 1px dashed var(--border);
+      color: var(--border);
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 0.8rem 0;
+      width: 100%;
+      margin-top: 1rem;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.08em;
+    }
+    #global-add-para:hover {
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+
+    /* ── EMPTY STATE ── */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--mid);
+      text-align: center;
+      gap: 0.6rem;
+    }
+
+    .empty-state-glyph {
+      font-family: 'IM Fell English', serif;
+      font-size: 4rem;
+      opacity: 0.15;
+      line-height: 1;
+    }
+
+    .empty-state-text {
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      font-style: italic;
+    }
+
+    /* ── CONTEXT MENU ── */
+    #ctx-menu {
+      position: fixed;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      padding: 0.4rem 0;
+      z-index: 200;
+      min-width: 160px;
+      display: none;
+      font-size: 0.75rem;
+    }
+
+    .ctx-item {
+      padding: 0.45rem 1rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.1s;
+    }
+    .ctx-item:hover { background: #222; }
+    .ctx-item.danger { color: #e07070; }
+    .ctx-separator {
+      height: 1px;
+      background: #333;
+      margin: 0.3rem 0;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 0.6rem 1.2rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      z-index: 300;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── LOADING OVERLAY ── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      font-family: 'IM Fell English', serif;
+      font-size: 2rem;
+      letter-spacing: -1px;
+      transition: opacity 0.4s;
+    }
+    #loading.fade { opacity: 0; pointer-events: none; }
+
+    /* Scrollbar global */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">Folio</div>
+
+<!-- Topbar -->
+<div id="topbar">
+  <div class="topbar-logo">Folio</div>
+  <div class="topbar-actions">
+    <button id="save-btn" disabled onclick="saveAll()">Saved</button>
+    <span class="topbar-user" id="topbarUser"></span>
+    <button class="btn-ghost" onclick="handleLogout()">Sign out</button>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div id="layout">
+
+  <!-- Left Panel -->
+  <div id="left-panel">
+    <div id="left-panel-header">
+      <div class="panel-title">Manuscript</div>
+      <input class="book-title-input" id="bookTitle" placeholder="Untitled Book" />
+    </div>
+    <div id="chapters-list"></div>
+    <div id="left-panel-footer">
+      <button id="add-chapter-btn" onclick="addChapter()">+ New Chapter</button>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div id="right-panel">
+    <div id="right-panel-header">
+      <div id="chapter-heading">—</div>
+      <div class="word-count" id="wordCount">0 words</div>
+    </div>
+    <div id="editor-area">
+      <div id="empty-state">
+        <div class="empty-state-glyph">¶</div>
+        <div class="empty-state-text">Select a chapter to begin writing.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div id="ctx-menu">
+  <div class="ctx-item" id="ctx-add-child">↳ Add sub-paragraph</div>
+  <div class="ctx-item" id="ctx-add-sibling">+ Add paragraph below</div>
+  <div class="ctx-separator"></div>
+  <div class="ctx-item" id="ctx-indent">→ Indent</div>
+  <div class="ctx-item" id="ctx-outdent">← Outdent</div>
+  <div class="ctx-separator"></div>
+  <div class="ctx-item danger" id="ctx-delete">✕ Delete paragraph</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─── SUPABASE INIT ───────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://yspinihkruvjmawqjqwb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzcGluaWhrcnV2am1hd3FqcXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5Mzk2MjAsImV4cCI6MjA5NDUxNTYyMH0.yUx4PeOnO0xA_GOvx5l20mNXv1K5ynXfUX1KznHCY3s';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentUser = null;
+let bookId = null;
+let chapters = [];         // [{id, number, title, synopsis, order}]
+let activeChapterId = null;
+let paragraphs = [];       // [{id, chapter_id, text, depth, order, parent_id}]
+let ctxTarget = null;      // paragraph id for context menu
+
+// ─── BOOT ────────────────────────────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'index.html'; return; }
+
+  currentUser = session.user;
+  document.getElementById('topbarUser').textContent = currentUser.email;
+
+  await ensureBookAndSchema();
+  await loadChapters();
+
+  setTimeout(() => {
+    const loading = document.getElementById('loading');
+    loading.classList.add('fade');
+    setTimeout(() => loading.remove(), 400);
+  }, 300);
+})();
+
+// ─── SCHEMA / BOOK SETUP ─────────────────────────────────────────────────────
+async function ensureBookAndSchema() {
+  // Try to get existing book for user
+  let { data: books } = await sb.from('books').select('*').eq('user_id', currentUser.id).limit(1);
+
+  if (!books || books.length === 0) {
+    const { data: newBook } = await sb.from('books').insert({
+      user_id: currentUser.id,
+      title: 'Untitled Book'
+    }).select().single();
+    if (newBook) { bookId = newBook.id; document.getElementById('bookTitle').value = newBook.title; }
+  } else {
+    bookId = books[0].id;
+    document.getElementById('bookTitle').value = books[0].title || 'Untitled Book';
+  }
+
+  // Book title auto-save
+  document.getElementById('bookTitle').addEventListener('input', () => {
+    markDirty();
+  });
+}
+
+// ─── CHAPTERS ────────────────────────────────────────────────────────────────
+async function loadChapters() {
+  if (!bookId) return;
+  const { data } = await sb.from('chapters')
+    .select('*')
+    .eq('book_id', bookId)
+    .order('order', { ascending: true });
+  chapters = data || [];
+  renderChapterList();
+  if (chapters.length > 0) selectChapter(chapters[0].id);
+}
+
+function renderChapterList() {
+  const list = document.getElementById('chapters-list');
+  list.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const card = document.createElement('div');
+    card.className = 'chapter-card' + (ch.id === activeChapterId ? ' active' : '');
+    card.dataset.id = ch.id;
+
+    card.innerHTML = `
+      <div class="chapter-card-inner">
+        <div class="chapter-number">
+          <span>Chapter ${i + 1}</span>
+          <button class="chapter-delete-btn" title="Delete chapter" onclick="deleteChapter('${ch.id}', event)">✕</button>
+        </div>
+        <input class="chapter-title-field" placeholder="Chapter title…" value="${esc(ch.title || '')}" 
+          onclick="selectChapter('${ch.id}')"
+          oninput="markDirty(); updateChapterField('${ch.id}', 'title', this.value)" />
+        <textarea class="chapter-synopsis-field" rows="2" placeholder="Synopsis…"
+          oninput="markDirty(); updateChapterField('${ch.id}', 'synopsis', this.value)">${esc(ch.synopsis || '')}</textarea>
+      </div>
+    `;
+
+    card.addEventListener('mousedown', (e) => {
+      if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
+      selectChapter(ch.id);
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+async function addChapter() {
+  const order = chapters.length;
+  const { data, error } = await sb.from('chapters').insert({
+    book_id: bookId,
+    title: '',
+    synopsis: '',
+    pov: '',
+    status: 'Draft',
+    location: '',
+    arc: '',
+    order
+  }).select().single();
+
+  if (!error && data) {
+    chapters.push(data);
+    renderChapterList();
+    selectChapter(data.id);
+    // Focus title
+    setTimeout(() => {
+      const card = document.querySelector(`.chapter-card[data-id="${data.id}"] .chapter-title-field`);
+      if (card) card.focus();
+    }, 50);
+  }
+}
+
+async function deleteChapter(id, e) {
+  e.stopPropagation();
+  if (!confirm('Delete this chapter and all its content?')) return;
+  await sb.from('paragraphs').delete().eq('chapter_id', id);
+  await sb.from('chapters').delete().eq('id', id);
+  chapters = chapters.filter(c => c.id !== id);
+  if (activeChapterId === id) {
+    activeChapterId = null;
+    paragraphs = [];
+    renderEditor();
+  }
+  renderChapterList();
+  toast('Chapter deleted.');
+}
+
+function updateChapterField(id, field, value) {
+  const ch = chapters.find(c => c.id === id);
+  if (ch) ch[field] = value;
+  markDirty();
+}
+
+async function selectChapter(id) {
+  activeChapterId = id;
+  const ch = chapters.find(c => c.id === id);
+  document.getElementById('chapter-heading').textContent = ch?.title || '—';
+  document.querySelectorAll('.chapter-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.id === id);
+  });
+  await loadParagraphs(id);
+}
+
+// ─── PARAGRAPHS ──────────────────────────────────────────────────────────────
+async function loadParagraphs(chapterId) {
+  const { data } = await sb.from('paragraphs')
+    .select('*')
+    .eq('chapter_id', chapterId)
+    .order('order', { ascending: true });
+  paragraphs = data || [];
+  renderEditor();
+}
+
+function renderEditor() {
+  const area = document.getElementById('editor-area');
+  area.innerHTML = '';
+
+  if (!activeChapterId) {
+    area.innerHTML = `<div id="empty-state">
+      <div class="empty-state-glyph">¶</div>
+      <div class="empty-state-text">Select a chapter to begin writing.</div>
+    </div>`;
+    return;
+  }
+
+  if (paragraphs.length === 0) {
+    // Show empty + add button
+    const emptyDiv = document.createElement('div');
+    emptyDiv.id = 'empty-state';
+    emptyDiv.innerHTML = `
+      <div class="empty-state-glyph">¶</div>
+      <div class="empty-state-text">No paragraphs yet.</div>`;
+    area.appendChild(emptyDiv);
+  } else {
+    // Render tree
+    const rootParas = paragraphs.filter(p => p.depth === 0 || !p.parent_id);
+    // Build flat ordered list respecting parent order
+    const ordered = buildOrderedTree();
+    renderParaNodes(area, ordered, 0);
+  }
+
+  // Global add button
+  const globalAdd = document.createElement('button');
+  globalAdd.id = 'global-add-para';
+  globalAdd.innerHTML = '+ Add paragraph';
+  globalAdd.onclick = () => addParagraph(null, 0);
+  area.appendChild(globalAdd);
+
+  updateWordCount();
+}
+
+function buildOrderedTree() {
+  // parent_id is the ONLY source of truth for hierarchy.
+  const byId = {};
+  paragraphs.forEach(p => byId[p.id] = { ...p, children: [] });
+
+  const roots = [];
+  paragraphs.forEach(p => {
+    const node = byId[p.id];
+    if (p.parent_id && byId[p.parent_id]) {
+      byId[p.parent_id].children.push(node);
+    } else {
+      node.parent_id = null;
+      roots.push(node);
+    }
+  });
+
+  const sortLevel = (nodes) => {
+    nodes.sort((a, b) => a.order - b.order);
+    nodes.forEach(n => sortLevel(n.children));
+  };
+  sortLevel(roots);
+  return roots;
+}
+
+// Walk parent chain to get true visual depth
+function getNodeDepth(pid) {
+  const byId = {};
+  paragraphs.forEach(p => byId[p.id] = p);
+  let depth = 0;
+  let cur = byId[pid];
+  while (cur && cur.parent_id && byId[cur.parent_id]) {
+    depth++;
+    cur = byId[cur.parent_id];
+  }
+  return depth;
+}
+
+function renderParaNodes(container, nodes, depth) {
+  nodes.forEach(node => {
+    const el = createParaNode(node, depth);
+    container.appendChild(el);
+    if (node.children && node.children.length > 0) {
+      const childWrap = el.querySelector('.para-children');
+      if (childWrap) renderParaNodes(childWrap, node.children, depth + 1);
+    }
+  });
+}
+
+function createParaNode(para, depth) {
+  const node = document.createElement('div');
+  node.className = 'para-node';
+  node.dataset.id = para.id;
+  node.dataset.depth = depth;
+
+  const hasChildren = para.children && para.children.length > 0;
+
+  node.innerHTML = `
+    <div class="para-row">
+      <button class="para-toggle ${hasChildren ? 'has-children' : ''}" data-pid="${para.id}" title="${hasChildren ? 'Collapse/expand' : 'No sub-paragraphs'}">
+        <span class="para-toggle-icon">${hasChildren ? '▾' : '·'}</span>
+      </button>
+      <div class="para-content-wrap">
+        <textarea class="para-text" data-pid="${para.id}"
+          placeholder="Write here…" rows="1">${esc(para.text || '')}</textarea>
+      </div>
+    </div>
+    <div class="para-children"></div>
+  `;
+
+  const toggleBtn = node.querySelector('.para-toggle');
+  const childrenWrap = node.querySelector('.para-children');
+
+  if (hasChildren) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const collapsed = childrenWrap.classList.toggle('collapsed');
+      toggleBtn.classList.toggle('collapsed', collapsed);
+    });
+  }
+
+  const textarea = node.querySelector('.para-text');
+  autoResize(textarea);
+  textarea.addEventListener('input', () => {
+    autoResize(textarea);
+    const p = paragraphs.find(x => x.id === para.id);
+    if (p) p.text = textarea.value;
+    markDirty();
+    updateWordCount();
+  });
+
+  textarea.addEventListener('keydown', (e) => handleParaKeydown(e, para.id, depth));
+  textarea.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showCtxMenu(e.clientX, e.clientY, para.id);
+  });
+
+  return node;
+}
+
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// ─── KEYBOARD NAVIGATION ─────────────────────────────────────────────────────
+function handleParaKeydown(e, pid, depth) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (e.shiftKey) outdentPara(pid);
+    else indentPara(pid);
+    return;
+  }
+
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    addParagraph(pid, depth);
+    return;
+  }
+
+  // Backspace on an empty paragraph → delete it and focus the one above
+  if (e.key === 'Backspace') {
+    const textarea = e.target;
+    if (textarea.value === '') {
+      e.preventDefault();
+      const allParas = [...document.querySelectorAll('.para-text')];
+      const idx = allParas.indexOf(textarea);
+      const focusTarget = idx > 0 ? allParas[idx - 1] : (allParas[idx + 1] || null);
+      deleteParagraph(pid).then(() => {
+        if (focusTarget) {
+          // focusTarget may have been re-rendered; find by pid
+          const pid2 = focusTarget.dataset.pid;
+          const el = document.querySelector(`.para-text[data-pid="${pid2}"]`) || document.querySelector('.para-text:last-of-type');
+          if (el) { el.focus(); placeCaretAtEnd(el); }
+        }
+      });
+    }
+  }
+}
+
+function placeCaretAtEnd(textarea) {
+  const len = textarea.value.length;
+  textarea.setSelectionRange(len, len);
+}
+
+// ─── PARAGRAPH CRUD ──────────────────────────────────────────────────────────
+async function addParagraph(afterId, depth, parentId = null) {
+  // Calculate order: insert after afterId or at end
+  let order = paragraphs.length > 0 ? Math.max(...paragraphs.map(p => p.order)) + 1 : 0;
+  let actualParentId = parentId;
+
+  if (afterId) {
+    const ref = paragraphs.find(p => p.id === afterId);
+    if (ref) {
+      actualParentId = ref.parent_id;
+      order = ref.order + 0.5;
+    }
+  }
+
+  const { data, error } = await sb.from('paragraphs').insert({
+    chapter_id: activeChapterId,
+    text: '',
+    depth: depth,
+    order: order,
+    parent_id: actualParentId
+  }).select().single();
+
+  if (!error && data) {
+    // Re-order to integers
+    paragraphs.push(data);
+    paragraphs.sort((a,b) => a.order - b.order);
+    // Reindex
+    for (let i = 0; i < paragraphs.length; i++) {
+      paragraphs[i].order = i;
+    }
+    await Promise.all(
+      paragraphs.map(p =>
+        sb.from('paragraphs').update({ order: p.order }).eq('id', p.id)
+      )
+    );
+    renderEditor();
+    // Focus new paragraph
+    setTimeout(() => {
+      const ta = document.querySelector(`.para-text[data-pid="${data.id}"]`);
+      if (ta) ta.focus();
+    }, 30);
+  }
+}
+
+async function indentPara(pid) {
+  const p = paragraphs.find(x => x.id === pid);
+  if (!p) return;
+
+  const allTextareas = [...document.querySelectorAll('.para-text')];
+  const myIdx = allTextareas.findIndex(ta => ta.dataset.pid === pid);
+  if (myIdx <= 0) return;
+
+  const abovePid = allTextareas[myIdx - 1].dataset.pid;
+  if (abovePid === pid) return;
+
+  const above = paragraphs.find(x => x.id === abovePid);
+  if (!above) return;
+
+  // Guard: above must not be a descendant of pid (would create a cycle)
+  const descendants = new Set();
+  const collectDesc = (id) => {
+    paragraphs.filter(x => x.parent_id === id).forEach(x => {
+      descendants.add(x.id);
+      collectDesc(x.id);
+    });
+  };
+  collectDesc(pid);
+  if (descendants.has(abovePid)) return;
+
+  // Compute depth from the rendered DOM, not the stale in-memory field
+  const aboveNode = document.querySelector(`.para-node[data-id="${abovePid}"]`);
+  const aboveDepth = aboveNode ? parseInt(aboveNode.dataset.depth, 10) : (above.depth || 0);
+  const newDepth = aboveDepth + 1;
+
+  // Update in-memory array directly — no DB refetch that would discard unsaved text
+  p.parent_id = above.id;
+  p.depth = newDepth;
+
+  const { error } = await sb.from('paragraphs')
+    .update({ parent_id: above.id, depth: newDepth })
+    .eq('id', pid);
+
+  if (error) {
+    // Roll back the in-memory change
+    p.parent_id = null;
+    p.depth = 0;
+    toast('Could not indent paragraph.');
+    return;
+  }
+
+  renderEditor();
+  setTimeout(() => document.querySelector(`.para-text[data-pid="${pid}"]`)?.focus(), 30);
+}
+
+async function outdentPara(pid) {
+  const p = paragraphs.find(x => x.id === pid);
+  if (!p || !p.parent_id) return;
+
+  const currentParent = paragraphs.find(x => x.id === p.parent_id);
+  const newParentId = currentParent ? (currentParent.parent_id || null) : null;
+
+  // Compute new depth from the DOM
+  const myNode = document.querySelector(`.para-node[data-id="${pid}"]`);
+  const currentDepth = myNode ? parseInt(myNode.dataset.depth, 10) : (p.depth || 1);
+  const newDepth = Math.max(0, currentDepth - 1);
+
+  // Update in-memory first
+  p.parent_id = newParentId;
+  p.depth = newDepth;
+
+  const { error } = await sb.from('paragraphs')
+    .update({ parent_id: newParentId, depth: newDepth })
+    .eq('id', pid);
+
+  if (error) {
+    toast('Could not outdent paragraph.');
+    // Reload to restore consistent state
+    await loadParagraphs(activeChapterId);
+    return;
+  }
+
+  renderEditor();
+  setTimeout(() => document.querySelector(`.para-text[data-pid="${pid}"]`)?.focus(), 30);
+}
+
+
+async function deleteParagraph(pid) {
+  // Delete paragraph and all its descendants
+  const toDelete = [pid];
+  const findDescendants = (parentId) => {
+    paragraphs.filter(p => p.parent_id === parentId).forEach(p => {
+      toDelete.push(p.id);
+      findDescendants(p.id);
+    });
+  };
+  findDescendants(pid);
+
+  await sb.from('paragraphs').delete().in('id', toDelete);
+  paragraphs = paragraphs.filter(p => !toDelete.includes(p.id));
+  renderEditor();
+  toast('Paragraph deleted.');
+}
+
+// ─── CONTEXT MENU ────────────────────────────────────────────────────────────
+function showCtxMenu(x, y, pid) {
+  ctxTarget = pid;
+  const menu = document.getElementById('ctx-menu');
+  menu.style.display = 'block';
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+
+  const para = paragraphs.find(p => p.id === pid);
+  const depth = para ? (para.depth || 0) : 0;
+
+  document.getElementById('ctx-add-child').onclick = () => {
+    hideCtxMenu();
+    addChildParagraph(pid, depth);
+  };
+  document.getElementById('ctx-add-sibling').onclick = () => {
+    hideCtxMenu();
+    addParagraph(pid, depth);
+  };
+  document.getElementById('ctx-indent').onclick = () => { hideCtxMenu(); indentPara(pid); };
+  document.getElementById('ctx-outdent').onclick = () => { hideCtxMenu(); outdentPara(pid); };
+  document.getElementById('ctx-delete').onclick = () => { hideCtxMenu(); deleteParagraph(pid); };
+}
+
+async function addChildParagraph(parentId, parentDepth) {
+  const { data, error } = await sb.from('paragraphs').insert({
+    chapter_id: activeChapterId,
+    text: '',
+    depth: parentDepth + 1,
+    order: paragraphs.length,
+    parent_id: parentId
+  }).select().single();
+
+  if (!error && data) {
+    paragraphs.push(data);
+    await loadParagraphs(activeChapterId);
+    setTimeout(() => {
+      const ta = document.querySelector(`.para-text[data-pid="${data.id}"]`);
+      if (ta) ta.focus();
+    }, 30);
+  }
+}
+
+function hideCtxMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+  ctxTarget = null;
+}
+
+document.addEventListener('click', () => hideCtxMenu());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideCtxMenu();
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    if (!btn.disabled) saveAll();
+  }
+});
+
+// ─── WORD COUNT ──────────────────────────────────────────────────────────────
+function updateWordCount() {
+  const text = paragraphs.map(p => p.text || '').join(' ');
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = `${words.toLocaleString()} word${words !== 1 ? 's' : ''}`;
+}
+
+// ─── SAVE ────────────────────────────────────────────────────────────────────
+function markDirty() {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = 'Save';
+  btn.disabled = false;
+  btn.className = 'dirty';
+}
+
+async function saveAll() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  btn.className = '';
+
+  try {
+    // Save book title
+    await sb.from('books').update({ title: document.getElementById('bookTitle').value }).eq('id', bookId);
+
+    // Save all chapters
+    for (const ch of chapters) {
+      await sb.from('chapters').update({
+        title: ch.title || '',
+        synopsis: ch.synopsis || ''
+      }).eq('id', ch.id);
+    }
+
+    // Save all paragraphs texts
+    for (const p of paragraphs) {
+      await sb.from('paragraphs').update({ text: p.text || '' }).eq('id', p.id);
+    }
+
+    btn.textContent = 'Saved';
+    btn.className = 'saved';
+    setTimeout(() => {
+      btn.disabled = true;
+    }, 1200);
+  } catch (err) {
+    btn.textContent = 'Error — retry';
+    btn.disabled = false;
+    btn.className = 'dirty';
+    toast('Save failed. Check your connection.');
+  }
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+async function handleLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
