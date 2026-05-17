@@ -1,0 +1,2 @@
+# galatea
+The writer IDE
